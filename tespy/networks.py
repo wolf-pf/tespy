@@ -1184,6 +1184,9 @@ class network:
 
             for c in self.conns.index:
                 self.solve_check_properties(c)
+                if c.m.val_SI < 0:
+                    c.m.val_SI *= -1
+
 
     def solve_check_properties(self, c):
         """
