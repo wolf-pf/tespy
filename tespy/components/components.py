@@ -4720,7 +4720,7 @@ class heat_exchanger_simple(component):
         return ['Q', 'pr', 'zeta', 'D', 'L', 'ks',
                 'kA', 't_a', 't_a_design', 'kA_char',
                 'SQ1', 'SQ2', 'Sirr',
-                'hydro_group', 'kA_group']
+                'hydro_group', 'kA_group', 'c_in', 'c_out']
 
     def attr_prop(self):
         return {'Q': dc_cp(), 'pr': dc_cp(), 'zeta': dc_cp(),
@@ -4728,7 +4728,8 @@ class heat_exchanger_simple(component):
                 'kA': dc_cp(), 't_a': dc_cp(), 't_a_design': dc_cp(),
                 'kA_char': dc_cc(method='HE_HOT', param='m'),
                 'SQ1': dc_cp(), 'SQ2': dc_cp(), 'Sirr': dc_cp(),
-                'hydro_group': dc_gcp(), 'kA_group': dc_gcp()}
+                'hydro_group': dc_gcp(), 'kA_group': dc_gcp(), 'c_in': dc_cp(),
+                'c_out': dc_cp()}
 
     def default_design(self):
         return ['pr']
@@ -5118,6 +5119,10 @@ class heat_exchanger_simple(component):
         if mode == 'post':
             self.SQ1.val = inl[0].m.val_SI * (s_mix_ph(outl[0].to_flow()) -
                                               s_mix_ph(inl[0].to_flow()))
+        if mode == 'post':
+            self.c_in.val = (inl[0].m.val_SI * 4) / (v_mix_ph(inl[0].to_flow()) * math.pi * (self.D.val ** 2) * 3600)
+
+            self.c_out.val = (outl[0].m.val_SI * 4) / (v_mix_ph(outl[0].to_flow()) * math.pi * (self.D.val ** 2) * 3600)
 
         if mode == 'pre':
 
@@ -5206,6 +5211,9 @@ class heat_exchanger_simple(component):
             print('SQ2 = ', self.SQ2.val, 'W / K; '
                   'Sirr = ', self.Sirr.val, 'W / K; '
                   'kA = ', self.kA.val, 'W / (m^2 * K)')
+        if self.D.is_set:
+            print('c_in = ', self.c_in.val, 'm / s; '
+                  'c_out = ', self.c_out.val, 'm / s; ')
 
 # %%
 
@@ -5233,6 +5241,8 @@ class pipe(heat_exchanger_simple):
     - t_a: ambient temperature, provide parameter in network's temperature unit
     - t_a_design: ambient temperature design case, provide parameter in
       network's temperature unit
+    - c_in: Inlet velocity as postprocessing-result, :math:`[c_{in}]=\text{m/s}`
+    - c_out: Outlet velocity as postprocessing-result, :math:`[c_{out}]=\text{m/s}`
 
     **equations**
 
