@@ -1133,22 +1133,36 @@ class network:
         i = 0
         for c in self.conns.index:
             if not c.m.val_set:
-                c.m.val_SI += self.vec_z[i * (self.num_vars)] * self.relax
+                # should negative mass flows be allowed
+                relax = max(1, -self.vec_z[i * (self.num_vars)] /
+                            (0.5 * c.m.val_SI))
+                c.m.val_SI += self.vec_z[i * (self.num_vars)] / relax
+
             if not c.p.val_set:
-                c.p.val_SI += self.vec_z[i * (self.num_vars) + 1] * self.relax
+                # this prevents negative pressures
+                relax = max(1, -self.vec_z[i * (self.num_vars) + 1] /
+                            (0.5 * c.p.val_SI))
+                c.p.val_SI += self.vec_z[i * (self.num_vars) + 1] / relax
             if not c.h.val_set:
+                # should negative enthalpies be allowed? Could also be
+                # necessary!
+                relax = max(1, -self.vec_z[i * (self.num_vars) + 2] /
+                            (0.5 * c.h.val_SI))
                 c.h.val_SI += self.vec_z[i * (self.num_vars) + 2] * self.relax
 
             j = 0
             for fluid in self.fluids:
                 # add increment
                 if not c.fluid.val_set[fluid]:
+                    # this prevents negative mass fractions
+                    relax = max(1, -self.vec_z[i * (self.num_vars) + 3 + j] /
+                                (0.5 * c.fluid.val[fluid]))
                     c.fluid.val[fluid] += (
-                            self.vec_z[i * (self.num_vars) + 3 + j])
-
+                            self.vec_z[i * (self.num_vars) + 3 + j]) / relax
                 # prevent bad changes within solution process
-                if c.fluid.val[fluid] < hlp.err:
-                    c.fluid.val[fluid] = 0
+                # the second part would not be required anymore!
+#                if c.fluid.val[fluid] < hlp.err:
+#                    c.fluid.val[fluid] = 0
                 if c.fluid.val[fluid] > 1 - hlp.err:
                     c.fluid.val[fluid] = 1
 
@@ -1156,18 +1170,16 @@ class network:
             i += 1
 
         # check properties for consistency
-        if self.iter < 3 and self.init_file is None:
+        if self.iter < 3:
             for c in self.conns.index:
                 self.solve_check_properties(c)
 
-            for cp in self.comps.index:
-                cp.convergence_check(self)
+            if self.init_file is None:
+                for cp in self.comps.index:
+                    cp.convergence_check(self)
 
-            for c in self.conns.index:
-                self.solve_check_properties(c)
-                if c.m.val_SI < 0:
-                    c.m.val_SI *= -1
-
+                for c in self.conns.index:
+                    self.solve_check_properties(c)
 
     def solve_check_properties(self, c):
         """
@@ -1183,10 +1195,10 @@ class network:
         :returns: no return value
         """
         # pressure
-        if c.p.val_SI <= self.p_range_SI[0] and not c.p.val_set:
-            c.p.val_SI = self.p_range_SI[0]
-        if c.p.val_SI >= self.p_range_SI[1] and not c.p.val_set:
-            c.p.val_SI = self.p_range_SI[1]
+#        if c.p.val_SI <= self.p_range_SI[0] and not c.p.val_set:
+#            c.p.val_SI = self.p_range_SI[0]
+#        if c.p.val_SI >= self.p_range_SI[1] and not c.p.val_set:
+#            c.p.val_SI = self.p_range_SI[1]
 
         # enthalpy
         if c.h.val_SI < self.h_range_SI[0] and not c.h.val_set:
