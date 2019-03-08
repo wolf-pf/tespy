@@ -1097,9 +1097,9 @@ class network:
         # match connection (source, source_id, target, target_id) on
         # connection objects of design file
         if self.path_abs:
-            path = self.design_path + '/conn.csv'
+            path = self.init_path + '/conn.csv'
         else:
-            path = './' + self.design_path + '/conn.csv'
+            path = './' + self.init_path + '/conn.csv'
         df = pd.read_csv(path, index_col=0, delimiter=';', decimal='.')
         for c in self.conns.index:
             conn = (df.loc[df['s'].isin([c.s.label]) & df['t'].isin([c.t.label]) &
@@ -2171,7 +2171,8 @@ class network:
                 # get components bus func value
                 val = cp.bus_func(b.comps.loc[cp])
                 # save as reference value
-                b.comps.loc[cp].P_ref = val
+                if self.mode == 'design':
+                    b.comps.loc[cp].P_ref = cp.bus_func(b.comps.loc[cp]) / abs(b.comps.loc[cp].char.f_x(1))
                 b.P.val += val
 
         # connections
@@ -2237,7 +2238,8 @@ class network:
                                    'h / (' + self.h_unit + ')',
                                    'T / (' + self.T_unit + ')'])
         for c in self.conns.index:
-            df.loc[c.s.label + ' -> ' + c.t.label] = (
+            row = c.s.label + ':' + c.s_id + ' -> ' + c.t.label + ':' + c.t_id
+            df.loc[row] = (
                     [c.m.val_SI / self.m[self.m_unit],
                      c.p.val_SI / self.p[self.p_unit],
                      c.h.val_SI / self.h[self.h_unit],
